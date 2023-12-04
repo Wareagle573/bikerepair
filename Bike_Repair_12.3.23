@@ -1,0 +1,231 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdbool.h>
+#include <string.h>
+
+// basic linked list node struct to hold customer information
+typedef struct repairTicket
+{
+    char customer_fname[64];
+    char customer_lname[64];
+    char payment_info[64];
+    char bike_make[64];
+    char bike_model[64];
+    char request_time[64]; //make this pull from api
+    char amount_owed[10];
+    struct repairTicket* next;
+} repairTicket;
+
+// basic queue struct to keep track of first and last nodes
+typedef struct queue
+{
+    struct repairTicket* first, * last;
+} queue;
+
+// print queue
+int print_queue(struct queue* q)
+{
+    if(q->first == NULL)
+    { 
+        printf("No bike repairs in progress\n");
+        return 0;
+    };
+    // start with first node, then iterate with next until you reach NULL
+    struct repairTicket* tmp = q->first;
+    while(tmp != NULL)
+    {
+        printf("Customer First Name: %s \n", tmp->customer_fname);
+        printf("Customer Last Name: %s \n", tmp->customer_lname);
+        printf("Bike Make and Model: %s %s\n", tmp->bike_make, tmp->bike_model);
+        printf("Request Time: %s\n", tmp->request_time);
+        printf("Amount Owed: $%s\n", tmp->amount_owed);
+        tmp = tmp->next;
+    }
+    printf("\n");
+
+    return 1;
+}
+
+// function to simplify node creation
+struct repairTicket* create_ticket(char customer_fname[64], char customer_lname[64], char payment_info[64], char bike_make[64], char bike_model[64], char request_time[64], char amount_owed[10])
+{
+    // declare struct pointer and allocate memory
+    repairTicket* tmp = (repairTicket*)malloc(1 * sizeof(repairTicket));
+
+    // fill in data
+    strncpy(tmp->customer_fname, customer_fname, 64);
+    strncpy(tmp->customer_lname, customer_lname, 64);
+    strncpy(tmp->payment_info, payment_info, 64);
+    strncpy(tmp->bike_make, bike_make, 64);
+    strncpy(tmp->bike_model, bike_model, 64);
+    strncpy(tmp->request_time, request_time, 64);
+    strncpy(tmp->amount_owed, amount_owed, 10);
+    
+    // set next to NULL
+    tmp->next = NULL;
+
+    return tmp;
+}
+
+// insert into end of queue (FIFO)
+void Enqueue(struct queue* q, struct repairTicket* ticket)
+{
+    // if list is empty, first and last = n
+    if(q->first == NULL)
+    {
+        q->first = ticket;
+        q->last = ticket;
+    }
+    // if there is already something in the list, then (old)last->next is new node, and (new)last becomes new node
+    else{
+        q->last->next = ticket;
+        q->last = ticket;
+    }
+}
+
+// FIFO for queues, so we remove from front
+void Dequeue(struct queue* q)
+{
+    // if list is empty, return
+    if(q->first == NULL)
+    {
+        printf("No repairs in progress.\n");
+        return;
+    }
+    // if there is only one element in the queue
+    else if (q->first == q->last)
+    {
+        
+        // set both first and last to NULL
+        q->first = NULL;
+        q->last = NULL;
+    }
+    // point tmp to second in list, free first, point first to second
+    // order is important; we could lose link to remaining nodes
+    else
+    {
+        struct repairTicket* tmp = q->first->next;
+        q->first = tmp;
+    }
+    
+}
+
+// always init pointers to NULL
+void init_queue(struct queue* q)
+{
+    q->first = NULL;
+    q->last = NULL;
+}
+
+// recursive function to delete/free all nodes in a singly (single direction) linked list
+void delete_tickets(struct repairTicket* t)
+{
+    // if list is empty, return
+    if(t == NULL) return;
+
+    // iterate through all elements with next
+    delete_tickets(t->next);
+
+    // free everything in reverse (after recursive call)
+    free(t);
+}
+
+// function to delete/free entire queue
+void delete_queue(struct queue* q)
+{
+    // run recursive function above
+    delete_tickets(q->first);
+
+    // set first and last to NULL
+    q->first = NULL;
+    q->last = NULL;
+}
+
+int main()
+{
+    //initialize queue
+    struct queue q, completedQueue;
+    init_queue(&q);
+    init_queue(&completedQueue);
+
+    //declare variables
+    struct repairTicket* newTicket;
+    int choice;
+    do {
+
+        //menu to user
+        printf("\n-------- Menu --------\n");
+        printf("1. Add Ticket to Queue\n");
+        printf("2. Mark Ticket Complete\n");
+        printf("3. Print Queue\n");
+        printf("4. Print Ticket History\n");
+        printf("5. Empty Queue\n");
+        printf("0. Exit\n");
+        printf("----------------------\n");
+        printf("Enter your choice: ");
+        scanf("%d", &choice);
+
+        switch (choice) {
+        case 1: // enqueue
+            printf("Enter the new ticket information:\n");
+            char customer_fname[64], customer_lname[64], payment_info[64], bike_make[64], bike_model[64], request_time[64], amount_owed[10];
+            printf("Customer First Name: ");
+            scanf("%63s", customer_fname);
+            printf("Customer Last Name: ");
+            scanf("%63s", customer_lname);
+            printf("Payment Information: ");
+            scanf("%63s", payment_info);
+            printf("Bike Make: ");
+            scanf("%63s", bike_make);
+            printf("Bike Model: ");
+            scanf("%63s", bike_model);
+            printf("Request Time: ");
+            scanf("%63s", request_time);
+            printf("Amount Owed: ");
+            scanf("%9s", amount_owed);
+
+            newTicket = create_ticket(customer_fname, customer_lname, payment_info, bike_make, bike_model, request_time, amount_owed);
+            
+            Enqueue(&q, newTicket);
+            
+            break;
+
+        case 2: // dequeue
+            
+            struct repairTicket* dequeuedTicket = q.first;
+            
+            Enqueue(&completedQueue, dequeuedTicket);
+            Dequeue(&q);
+            break;
+
+        case 3: // print queue
+            printf("Queue: ");
+            printf("\n");
+            print_queue(&q);
+            break;
+
+        case 4: 
+        
+            printf("Completed Tickets History: \n");
+            print_queue(&completedQueue);
+            break;
+
+        case 5: // empty queue
+            printf("Emptying the queue\n");
+            delete_queue(&q);
+            init_queue(&q);
+            break;
+
+        case 0: //exit
+            break;
+        default:
+            printf("Invalid choice. Please enter a valid option.\n");
+        }
+    } while (choice != 0);
+
+    // Clean up memory before exiting
+    delete_queue(&q);
+    delete_queue(&completedQueue);
+
+    return 0;
+}
